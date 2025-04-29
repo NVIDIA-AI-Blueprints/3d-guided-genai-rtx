@@ -130,7 +130,7 @@ IF "%choice%"=="1" (
 
 :StartInstall
 ECHO Download ComfyUI
-curl -OL https://github.com/comfyanonymous/ComfyUI/releases/download/latest/ComfyUI_windows_portable_nvidia_or_cpu_nightly_pytorch.7z
+curl -OL https://github.com/comfyanonymous/ComfyUI/releases/latest/download/ComfyUI_windows_portable_nvidia.7z
 
 REM I've had issues with the curl command failing, so check and bail out if it has
 IF %ERRORLEVEL% NEQ 0 (
@@ -139,17 +139,17 @@ IF %ERRORLEVEL% NEQ 0 (
 ) ELSE (
     ECHO Extract ComfyUI
     IF "%comfyui_install_dir%"==".\ComfyUI_windows_portable\" (
-	tar -xvf .\ComfyUI_windows_portable_nvidia_or_cpu_nightly_pytorch.7z
+	tar -xvf .\ComfyUI_windows_portable_nvidia.7z
 		
     ) ELSE (
 		mkdir %comfyui_install_dir% 2>nul
 		pushd %comfyui_install_dir%
-		tar -xvf .\ComfyUI_windows_portable_nvidia_or_cpu_nightly_pytorch.7z
+		tar -xvf .\ComfyUI_windows_portable_nvidia.7z
 		popd
 		SET "comfyui_install_dir=%comfyui_install_dir%\ComfyUI_windows_portable\
     )
 	echo The current directory is: %CD%
-	ren ".\ComfyUI_windows_portable_nightly_pytorch" "ComfyUI_windows_portable"
+	
 	
     GOTO InstallPythonPackages
 )
