@@ -254,8 +254,7 @@ def install_trellis_local_modules(target_dir: Path) -> bool:
         return False
 
     module_paths = [
-        target_dir / 'trellis' / 'extensions' / 'vox2seq',
-        target_dir / 'patchfiles' / 'flash_attn-2.7.4.post1+cu128torch2.7.0cxx11abiFALSE-cp311-cp311-win_amd64.whl'
+        target_dir / 'trellis' / 'extensions' / 'vox2seq'
     ]
 
     all_success = True
