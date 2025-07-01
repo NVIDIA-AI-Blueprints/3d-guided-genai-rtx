@@ -7,6 +7,9 @@ import os
 import platform
 import logging
 import re
+import requests
+import time
+import psutil
 
 # Set up logging for get_conda_python_path and general use
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
@@ -402,6 +405,82 @@ def copy_blender_addons(target_dir: Path) -> bool:
         print("Some Blender addon copies failed")
     return all_success
 
+def run_and_monitor_gradio_service(target_dir: Path) -> bool:
+    """Run the Gradio service and monitor http://127.0.0.1:7860/ for up to 3 minutes, then terminate."""
+    conda_exe = get_conda_exe()
+    if not conda_exe:
+        print("Cannot run Gradio service: Conda executable not found.")
+        logger.error("Conda executable not found")
+        return False
+
+    run_script = target_dir / 'chat-to-3d-core' / 'run.py'
+    if not run_script.exists():
+        print(f"Gradio run script '{run_script}' does not exist.")
+        logger.error("Gradio run script not found: %s", run_script)
+        return False
+
+    print("Starting Gradio service...")
+    cmd = [
+        conda_exe, 'run', '-n', 'trellis',
+        'python', str(run_script)
+    ]
+    try:
+        # Start the process without capturing output to allow it to run in the background
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        logger.info("Started Gradio service with PID: %s", process.pid)
+    except subprocess.SubprocessError as e:
+        print(f"Error starting Gradio service: {str(e)}")
+        logger.error("Failed to start Gradio service: %s", str(e))
+        return False
+
+    # Monitor the webpage
+    url = "http://127.0.0.1:7860/"
+    timeout = 180  # 3 minutes in seconds
+    start_time = time.time()
+    check_interval = 5  # Check every 5 seconds
+
+    while time.time() - start_time < timeout:
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                print(f"Gradio service is active at {url}")
+                logger.info("Gradio webpage is active")
+                break
+        except requests.RequestException as e:
+            logger.debug("Gradio webpage not yet active: %s", str(e))
+        time.sleep(check_interval)
+    else:
+        print("Gradio service did not become active within 3 minutes.")
+        logger.warning("Gradio service timeout after %s seconds", timeout)
+
+    # Terminate the process
+    try:
+        parent = psutil.Process(process.pid)
+        # Terminate all child processes
+        for child in parent.children(recursive=True):
+            child.terminate()
+        parent.terminate()
+        # Wait briefly to ensure termination
+        parent.wait(timeout=5)
+        print("Gradio service terminated.")
+        logger.info("Gradio service terminated, PID: %s", process.pid)
+    except psutil.NoSuchProcess:
+        logger.warning("Gradio process already terminated")
+    except psutil.TimeoutExpired:
+        logger.warning("Gradio process did not terminate within timeout, forcing kill")
+        parent.kill()
+    except Exception as e:
+        print(f"Error terminating Gradio service: {str(e)}")
+        logger.error("Failed to terminate Gradio service: %s", str(e))
+        return False
+
+    return True
+
 def main():
     """Main function to execute Git clone, file replacement, Conda checks, package installation, and Blender addon copying."""
     # Step 1: Clone the repository
@@ -455,7 +534,11 @@ def main():
         env_var_value = str(target_dir)
         set_persistent_env_var(env_var_name, env_var_value, system_level=False)
 
-    # Step 9: Copy Blender addons for versions >= 4.2
+        # Step 9: Run and monitor Gradio service
+        print("\nRunning and monitoring Gradio service...")
+        run_and_monitor_gradio_service(target_dir)
+
+    # Step 10: Copy Blender addons for versions >= 4.2
     print("\nCopying Blender addons for versions >= 4.2...")
     copy_blender_addons(target_dir)
 
