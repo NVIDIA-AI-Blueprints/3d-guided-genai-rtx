@@ -13,6 +13,7 @@ import psutil
 import zipfile
 import tempfile
 
+
 # Set up logging for get_conda_python_path and general use
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger(__name__)
@@ -578,6 +579,7 @@ def install_ninja_to_trellis() -> bool:
 
     return True
 
+
 def main():
     """Main function to execute Git clone, file replacement, Conda checks, package installation, and Blender addon copying."""
     # Step 1: Clone the repository
@@ -639,9 +641,9 @@ def main():
         print("\nRunning and monitoring Gradio service...")
         run_and_monitor_gradio_service(target_dir)
 
-    # Step 11: Copy Blender addons for versions >= 4.2
-    print("\nCopying Blender addons for versions >= 4.2...")
-    copy_blender_addons(target_dir)
+        # Step 11: Copy Blender addons for versions >= 4.2
+        print("\nCopying Blender addons for versions >= 4.2...")
+        copy_blender_addons(target_dir)
 
 if __name__ == "__main__":
     main()
