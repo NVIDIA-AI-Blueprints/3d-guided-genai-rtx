@@ -7,6 +7,11 @@ import os
 import platform
 import logging
 import re
+import requests
+import time
+import psutil
+import zipfile
+import tempfile
 
 # Set up logging for get_conda_python_path and general use
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
@@ -402,6 +407,177 @@ def copy_blender_addons(target_dir: Path) -> bool:
         print("Some Blender addon copies failed")
     return all_success
 
+def run_and_monitor_gradio_service(target_dir: Path) -> bool:
+    """Run the Gradio service and monitor http://127.0.0.1:7860/ for up to 3 minutes, then terminate."""
+    conda_exe = get_conda_exe()
+    if not conda_exe:
+        print("Cannot run Gradio service: Conda executable not found.")
+        logger.error("Conda executable not found")
+        return False
+
+    run_script = target_dir / 'chat-to-3d-core' / 'run.py'
+    if not run_script.exists():
+        print(f"Gradio run script '{run_script}' does not exist.")
+        logger.error("Gradio run script not found: %s", run_script)
+        return False
+
+    print("Starting Gradio service...")
+    cmd = [
+        conda_exe, 'run', '-n', 'trellis',
+        'python', str(run_script)
+    ]
+    try:
+        # Start the process without capturing output to allow it to run in the background
+        process = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        logger.info("Started Gradio service with PID: %s", process.pid)
+    except subprocess.SubprocessError as e:
+        print(f"Error starting Gradio service: {str(e)}")
+        logger.error("Failed to start Gradio service: %s", str(e))
+        return False
+
+    # Monitor the webpage
+    url = "http://127.0.0.1:7860/"
+    timeout = 180  # 3 minutes in seconds
+    start_time = time.time()
+    check_interval = 5  # Check every 5 seconds
+
+    while time.time() - start_time < timeout:
+        try:
+            response = requests.get(url, timeout=5)
+            if response.status_code == 200:
+                print(f"Gradio service is active at {url}")
+                logger.info("Gradio webpage is active")
+                break
+        except requests.RequestException as e:
+            logger.debug("Gradio webpage not yet active: %s", str(e))
+        time.sleep(check_interval)
+    else:
+        print("Gradio service did not become active within 3 minutes.")
+        logger.warning("Gradio service timeout after %s seconds", timeout)
+
+    # Terminate the process
+    try:
+        parent = psutil.Process(process.pid)
+        # Terminate all child processes
+        for child in parent.children(recursive=True):
+            child.terminate()
+        parent.terminate()
+        # Wait briefly to ensure termination
+        parent.wait(timeout=5)
+        print("Gradio service terminated.")
+        logger.info("Gradio service terminated, PID: %s", process.pid)
+    except psutil.NoSuchProcess:
+        logger.warning("Gradio process already terminated")
+    except psutil.TimeoutExpired:
+        logger.warning("Gradio process did not terminate within timeout, forcing kill")
+        parent.kill()
+    except Exception as e:
+        print(f"Error terminating Gradio service: {str(e)}")
+        logger.error("Failed to terminate Gradio service: %s", str(e))
+        return False
+
+    return True
+
+def install_ninja_to_trellis() -> bool:
+    """Check for trellis environment in environments.txt, download ninja-win.zip, and install ninja.exe."""
+    logger.info("Attempting to install Ninja to Trellis environment")
+    # Check for environments.txt
+    env_file = Path(os.path.expanduser("~/.conda/environments.txt"))
+    if not env_file.exists():
+        print(f"Conda environments file not found at {env_file}")
+        logger.error("Conda environments file not found: %s", env_file)
+        return False
+
+    # Read environments.txt and find trellis
+    trellis_path = None
+    try:
+        with env_file.open('r') as f:
+            for line in f:
+                line = line.strip()
+                if line and 'trellis' in line:
+                    trellis_path = Path(line)
+                    print(f"Found trellis environment at: {trellis_path}")
+                    logger.info("Trellis environment found in environments.txt: %s", trellis_path)
+                    break
+        if not trellis_path:
+            print("Trellis environment not found in environments.txt")
+            logger.warning("No trellis environment in %s", env_file)
+            return False
+    except Exception as e:
+        print(f"Error reading environments.txt: {str(e)}")
+        logger.error("Failed to read %s: %s", env_file, str(e))
+        return False
+
+    # Download ninja-win.zip
+    ninja_url = "https://github.com/ninja-build/ninja/releases/download/v1.13.0/ninja-win.zip"
+    temp_dir = Path(tempfile.gettempdir()) / "ninja_download"
+    temp_dir.mkdir(exist_ok=True)
+    zip_path = temp_dir / "ninja-win.zip"
+
+    print(f"Downloading ninja from {ninja_url}...")
+    try:
+        response = requests.get(ninja_url, timeout=10)
+        if response.status_code != 200:
+            print(f"Failed to download ninja: HTTP {response.status_code}")
+            logger.error("Download failed: HTTP %s", response.status_code)
+            return False
+        with zip_path.open('wb') as f:
+            f.write(response.content)
+        logger.info("Downloaded ninja to %s", zip_path)
+    except requests.RequestException as e:
+        print(f"Error downloading ninja: {str(e)}")
+        logger.error("Download failed: %s", str(e))
+        return False
+
+    # Extract ninja-win.zip
+    try:
+        with zipfile.ZipFile(zip_path, 'r') as zip_ref:
+            zip_ref.extractall(temp_dir)
+        logger.info("Extracted ninja to %s", temp_dir)
+    except zipfile.BadZipFile as e:
+        print(f"Error extracting ninja zip: {str(e)}")
+        logger.error("Failed to extract %s: %s", zip_path, str(e))
+        return False
+
+    # Locate ninja.exe
+    ninja_exe = temp_dir / "ninja.exe"
+    if not ninja_exe.exists():
+        print(f"ninja.exe not found in extracted files at {temp_dir}")
+        logger.error("ninja.exe not found in %s", temp_dir)
+        return False
+
+    # Determine destination directory
+    if platform.system() == "Windows":
+        dest_dir = trellis_path
+    else:
+        dest_dir = trellis_path / "bin"
+    dest_dir.mkdir(exist_ok=True)
+    dest_path = dest_dir / "ninja.exe"
+
+    # Move ninja.exe to trellis environment
+    try:
+        shutil.move(str(ninja_exe), str(dest_path))
+        print(f"Successfully moved ninja.exe to {dest_path}")
+        logger.info("Moved ninja.exe to %s", dest_path)
+    except Exception as e:
+        print(f"Error moving ninja.exe to {dest_path}: {str(e)}")
+        logger.error("Failed to move ninja.exe to %s: %s", dest_path, str(e))
+        return False
+
+    # Clean up temporary directory
+    try:
+        shutil.rmtree(temp_dir)
+        logger.info("Cleaned up temporary directory %s", temp_dir)
+    except Exception as e:
+        logger.warning("Failed to clean up %s: %s", temp_dir, str(e))
+
+    return True
+
 def main():
     """Main function to execute Git clone, file replacement, Conda checks, package installation, and Blender addon copying."""
     # Step 1: Clone the repository
@@ -449,13 +625,21 @@ def main():
         print("\nInstalling local modules in trellis environment...")
         install_trellis_local_modules(target_dir)
 
-        # Step 8: Set persistent environment variable
+        # Step 8: Install ninja to trellis environment
+        print("\nInstalling ninja to trellis environment...")
+        install_ninja_to_trellis()
+
+        # Step 9: Set persistent environment variable
         print("\nSetting persistent environment variable...")
         env_var_name = "CHAT_TO_3D_PATH"
         env_var_value = str(target_dir)
         set_persistent_env_var(env_var_name, env_var_value, system_level=False)
 
-    # Step 9: Copy Blender addons for versions >= 4.2
+        # Step 10: Run and monitor Gradio service
+        print("\nRunning and monitoring Gradio service...")
+        run_and_monitor_gradio_service(target_dir)
+
+    # Step 11: Copy Blender addons for versions >= 4.2
     print("\nCopying Blender addons for versions >= 4.2...")
     copy_blender_addons(target_dir)
 
