@@ -1,3 +1,28 @@
-ComfyUI_windows_portable/**
-ComfyUI_windows_portable_nvidia.7z
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+MI_test/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
 *.log
+
+# Temp files
+temp_*/
+~/

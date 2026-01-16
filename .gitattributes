@@ -1,5 +1,5 @@
 # Enforce LF for shell scripts (or any text file that should be LF)
 *.sh text eol=lf
-
 package.zip filter=lfs diff=lfs merge=lfs -text
 *.blend filter=lfs diff=lfs merge=lfs -text
+*.zip filter=lfs diff=lfs merge=lfs -text
