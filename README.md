@@ -16,7 +16,8 @@ We recommend a minimum of 32 GB of system RAM with 64GB+ recommended.
 <details><summary><h1>STEP 1 - Blueprint Download/Installation</h1></summary>
    
 # Installing the Blueprint:
-Download the latest release of the Blueprint installer: https://github.com/SKilbride/3d-guided-genai-rtx/releases
+Download the latest release of the Blueprint installer: [3DAI-Guided-BP-Installer.zip](https://github.com/NVIDIA-AI-Blueprints/3d-guided-genai-rtx/releases/download/v2.0/3DAI-Guided-BP-Installer.zip) 
+Extract the downloaded 3DAI-Guided-BP-Installer.zip to your local system.
 
 Run the blueprint installer by double clicking on:  3DAI-Guided-BP-Installer.exe
 
@@ -26,7 +27,8 @@ Authorize the install when prompted:
 
 (NOTE: The installer may take up to 3 minutes to initialize and display the GUI as the installation environment is built)
 
-<img width="702" height="632" alt="image" src="https://github.com/user-attachments/assets/2a298895-0cab-47ff-ad9d-426b2979938a" />
+<img width="1212" height="1124" alt="Screenshot 2026-02-24 085316" src="https://github.com/user-attachments/assets/60f63fc8-e588-4f02-afc8-886adfa64b80" />
+
 
 Click the Install button
    
