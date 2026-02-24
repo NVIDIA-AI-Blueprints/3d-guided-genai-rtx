@@ -1,9 +1,0 @@
-Microsoft.VisualStudio.2022.BuildTools --custom "--norestart --passive --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended" --disable-interactivity,winget_install,TRUE
-Microsoft.VCRedist.2015+.x64 -e --disable-interactivity,winget_install,TRUE
-9NW1B444LDLW --accept-source-agreements --accept-package-agreements,winget_install,TRUE
-https://github.com/AIGODLIKE/ComfyUI-CUP.git,./ComfyUI/custom_nodes/ComfyUI-CUP,FALSE
-https://github.com/Comfy-Org/NIMnodes.git,./ComfyUI/custom_nodes/NIMnodes,FALSE
-../package/python_files/Install_Blender_Addons.py,./ComfyUI/installertemp/python_files/Install_Blender_Addons.py,TRUE
-../package/python_files/Copy_Blender_Files.py,./ComfyUI/installertemp/python_files/Copy_Blender_Files.py,TRUE
-../package/python_files/ComfyUI_NIM_Requirements.py,./ComfyUI/installertemp/python_files/ComfyUI_NIM_Requirements.py,TRUE
-../package/python_files/run_ngc_podman_flux.py,run_ngc_podman_flux.py,TRUE
