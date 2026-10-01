@@ -1,6 +1,8 @@
 <h2>3D Guided Generative AI Blueprint</h2>
 
 # Description: 
+This blueprint is tested for Windows X64, other configurations are not currently supported.
+
 The 3D Guided Generative AI Blueprint unlocks greater control over image generation by laying out the content in Blender to guide the image layout. Users can quickly alter the look of the 3D scene using generative AI, and the image outputs can be iterated on by making simple changes in the 3D viewport - such as changing the image perspective by adjusting the camera angle in Blender. Creators can ideate on scene environments much faster using generative AI, and adjustments are made much faster due to the control offered by using the viewport as a depth map.    
 
 The blueprint produces high-quality outputs by leveraging the FLUX1.dev-depth model. Black Forest Labs' state-of-the-art FLUX.dev models, and ComfyUI provides a flexible and convenient UI. The Flux1.dev-depth model is quantized to NVFP4 and accelerated on NVIDIA GPUs, doubling performance and enabling this workflow to run on consumer GPUs. Sample image generation times using 30 steps at 1024x1024 resolution on a GeForce RTX 5090:
